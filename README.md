@@ -43,7 +43,7 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 
 1. Dans Home Assistant, va dans **Configuration > Automatisations > Blueprints**
 2. Clique sur **Importer un blueprint**
-3. Utilise ce lien :
+3. Utilise ce lien :<br>
 https://github.com/ton_utilisateur/home-assistant-blueprints/blob/main/blueprints/automation/RomainRou/pompe_piscine_intelligente.yaml
 
 ---

@@ -107,7 +107,7 @@ blueprint:
       name: Activation 2eme cycle
       default: false
       selector:
-        boolean:
+        boolean: {}
       description: >
         Bouton activation 2eme cycle le matin
     input_heure_2eme_cycle_matin:
@@ -129,7 +129,7 @@ blueprint:
       name: Activation 2eme cycle apres-midi
       default: false
       selector:
-        boolean:
+        boolean: {}
       description: >
         Bouton activation 2eme cycle après-midi 
     input_heure_2eme_cycle_apresmidi:

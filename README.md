@@ -36,6 +36,8 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 - Brome : 12 à 24h
 - Chlore choc : 8 à 12h
 - ...
+## Installation du blueprint ##
+[![Importer dans Home Assistant](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?repository_url=https://raw.githubusercontent.com/RomainRou/pompe_piscine_inteligente/main/pompe_piscine_intelligente.yaml)
 
 ## 📦 Importer dans Home Assistant
 

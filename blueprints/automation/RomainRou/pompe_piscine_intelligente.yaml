@@ -2,18 +2,18 @@ blueprint:
   name: Pompe piscine intelligente - tous modes (avec Telegram)
   description: >
     💧 Gère automatiquement la pompe de piscine selon :<br>
-    - 🕑 Heures fixes configurables (4 cycles/jour)<br>
+    - 🕑 Heures fixes configurables (2 cycles/jour + 2 intermédiaire)<br>
     - 🌡️ Température de l’eau (durée = température ÷ 2)<br>
     - ❄️ Mode hiver avec filtration minimale (mode hiver indiqué par le sensor saison)<br>
     - ☁️ Conditions météo (désactive en cas de pluie et réactive si pas de pluie dans les 3h)<br>
     - 🌱 Saison (adaptation dynamique de la durée)<br>
-    - 🧪 Mode traitement spécifique (brome, sel, algicide, floculant, etc.) avec durée prédéfinie<br>
+    - 🧪 Mode traitement spécifique (brome, sel, algicide, floculant, etc.) avec durée prédéfinie et réglable<br>
     📌 **Recommandations générales pour la filtration :**<br>
     - 💧 **Durée quotidienne recommandée** = Température de l’eau ÷ 2<br>
     - 🕗 **2 cycles recommandés** <br>
     - Matin : entre 6h00 et 9h00<br>
     - Après-midi : entre 14h00 et 18h00<br>
-    (Possibilité de rajouter 2 cycles heures par default 6h00,12h00,18h00,00h00)<br>
+    - Possibilité de mettre 2 cycles intermédiaire en plus<br>
     - ❄️ En hiver : 30–60 min pendant les heures les plus froides (ex. 6h–8h)<br>
     - ⚠️ Éviter les heures chaudes si électrolyse ou UV non stabilisé<br>
     - 💡 Optimisation énergétique possible avec heures creuses<br>
@@ -34,17 +34,18 @@ blueprint:
     - Anti-calcaire curatif - 12 à 24h<br>
     📲 **Notifications Telegram** <br>
     - Envoi de messages lors du démarrage ou de l'arrêt de la pompe<br>
-    - Avertissement si la filtration est annulée pour cause de mauvais temps<br>
+    - Avertissement si la filtration est annulée et suspendu pour cause de mauvais temps<br>
     ⚙️ **Personnalisation complète via les entrées du blueprint** :<br>
     - Capteurs de température piscine et extérieure<br>
-    - Entité météo pour désactivation en as de mauvais temps<br>
+    - Entité météo pour désactivation pluie<br>
     - Mode hiver (input_boolean ou binary_sensor)<br>
     - Saison détectée automatiquement<br>
     - Configuration du volume de la piscine et du débit de la pompe<br>
     - Durées ajustables par type de traitement<br>
     - Gestion des cycles matin/après-midi<br>
     ✅ **Sécurité et efficacité** <br>
-    - Le cycle est annulé si la météo devient défaroblable a la filtration<br>
+    - Le cycle est annulé ou suspendu si du mauvais temps est détecté via le sensor météo<br>
+    - La pompe est relancé si le temps change pendant le timeout après detection du mauvais temps<br>
     - La pompe est arrêtée automatiquement en fin de cycle<br>
     - Le mode revient sur "Filtration normale" après traitement spécial<br>
     🔧 *Personnalise chaque paramètre selon ton installation, ton traitement d’eau et ta stratégie énergétique.*
@@ -79,7 +80,18 @@ blueprint:
         entity:
           domain: weather
       description: Entité météo utilisée
-
+      
+    input_reglage_timeout_mauvais_temps:
+      name: Reglage durée timeout mauvais temps
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 7
+          unit_of_measurement: "h"
+      description: >
+        Réglage du temps du TIMEOUT entre le moment de la detection du mauvais temps et le retour a la meteo favorable pour relancer la pompe avant la fin de la durée
+    
     input_saison_sensor:
       name: Capteur de saison
       selector:
@@ -100,45 +112,42 @@ blueprint:
       default: "06:00:00"
       selector:
         time: {}
-      description: >
-        🕗 Recommandé entre 6h00 et 9h00 pour évacuer les dépôts nocturnes.
-        Idéal pour démarrer la journée avec une eau propre.
-    activation_cycle_1:
-      name: Activation 2eme cycle
+      description: Heure de démarrage du cycle du matin
+
+    input_activation_cycle_1:
+      name: Activation 2ème cycle matin
       default: false
       selector:
         boolean: {}
-      description: >
-        Bouton activation 2eme cycle le matin
+      description: Active le deuxième cycle du matin
+
     input_heure_2eme_cycle_matin:
-      name: Heure 2eme cycle matin
+      name: Heure 2ème cycle matin
       default: "12:00:00"
       selector:
         time: {}
-      description: > 
-        🕑 Heure de démarrage pour 2eme cycle le matin 
+      description: Heure de démarrage du deuxième cycle du matin
+
     input_heure_cycle_apresmidi:
       name: Heure démarrage cycle après-midi
-      default: "16:00:00"
+      default: "18:00:00"
       selector:
         time: {}
-      description: >
-        🕓 Recommandé entre 14h00 et 18h00 pour couvrir la période la plus chaude.
-        Cela limite la prolifération d’algues et optimise le traitement.   
-    activation_cycle_2:
-      name: Activation 2eme cycle apres-midi
+      description: Heure de démarrage du cycle après-midi
+
+    input_activation_cycle_2:
+      name: Activation 2ème cycle après-midi
       default: false
       selector:
         boolean: {}
-      description: >
-        Bouton activation 2eme cycle après-midi 
+      description: Active le deuxième cycle après-midi
+
     input_heure_2eme_cycle_apresmidi:
-      name: Heure 2eme cycle après-midi
+      name: Heure 2ème cycle après-midi
       default: "00:00:00"
       selector:
         time: {}
-      description: > 
-        🕞 Heure de démarrage pour un 2eme cycle l'après-midi 
+      description: Heure du deuxième cycle après-midi
 
     input_seuil_temperature:
       name: Température minimale pour filtration (°C)
@@ -148,12 +157,7 @@ blueprint:
           min: 0
           max: 40
           unit_of_measurement: "°C"
-      description: >
-        🌡️ Température en dessous de laquelle la filtration est ignorée (hors mode hiver).<br>
-        🔹 Recommandé : **12°C**<br>
-        ▪️ En dessous de 12°C, l’activité biologique est faible → filtration inutile.<br>
-        ▪️ Au-dessus, micro-organismes et algues peuvent proliférer → filtration nécessaire.<br>
-        ❄️ En mode hiver, ce seuil est ignoré et une filtration minimale est appliquée.<br> 
+      description: Température minimale pour activer la filtration
 
     input_filtration_minimale_hiver:
       name: Durée filtration minimale hiver (minutes)
@@ -163,8 +167,7 @@ blueprint:
           min: 0
           max: 60
           unit_of_measurement: "minutes"
-      description: >
-        Réglage de la durée de filttration minimum en hiver
+      description: Durée minimale de filtration en hiver
 
     input_contenance_piscine:
       name: Contenance piscine (m³)
@@ -275,7 +278,7 @@ blueprint:
       default: 3
       selector:
         number:
-          min: 2
+          min: 1
           max: 4
 
     reglage_algicide_ld:
@@ -322,6 +325,7 @@ variables:
   saison_entity: !input input_saison_sensor
   weather_entity: !input input_weather_entity
   telegram_user: !input telegram_user
+  r_timeout: !input input_reglage_timeout_mauvais_temps
   r_acp: !input reglage_anti_calcaire_preventif
   r_acc: !input reglage_anti_calcaire_curatif
   r_aap: !input reglage_anti_algues_preventif
@@ -352,18 +356,6 @@ variables:
   is_rainy: >
     {% set weather = states(weather_entity).state %}
     {{ weather in ['rainy', 'pouring', 'snowy-rainy', 'hail', 'lightning-rainy', 'pluie', 'forte pluie', 'orage avec pluie', 'neige', 'neige fondue', 'grêle' ] }}
-  duree_max_filtration_heures: >
-    {% set heure_matin = states(input_heure_cycle_matin) %}
-    {% set heure_apresmidi = states(input_heure_cycle_apresmidi) %}
-    {% set t1 = strptime(heure_matin, "%H:%M:%S") %}
-    {% set t2 = strptime(heure_apresmidi, "%H:%M:%S") %}
-    {% set delta = (t2.timestamp() - t1.timestamp()) / 3600 %}
-    {% if delta > 1 %}
-      {{ (delta - 1) | round(2) }}
-    {% else %}
-      0
-    {% endif %}
-
   duree_min_volume_heures: >
     {% set debit = debit_pompe | float(1) %}
     {% set volume = volume_piscine | float(1) %}
@@ -376,21 +368,8 @@ variables:
       {% if m == 'Filtration normale' %}
         {% set duree_temp = ((temp_piscine + (temp_exterieure * 0.3)) / 2 / 2) | float(0) %}
         {% set duree_volume = duree_min_volume_heures | float(0) %}
-        {% set duree = [duree_temp, duree_volume] | max | float(0) %}
-        {% set coeff_saison = coefficient_saison | float(1.0) %}
-        {% set base_duree = (duree * coeff_saison) | float(0) %}
-        {% set eco1 = is_state('input_boolean.input_activation_cycle_1', 'on') %}
-        {% set eco2 = is_state('input_boolean.input_activation_cycle_2', 'on') %}
-        {% if eco1 and eco2 %}
-          {{ [base_duree / 4, duree_max_filtration_heures] | min | round(2) }}
-        {% elif eco1 or eco2 %}
-          {{ [base_duree / 3, duree_max_filtration_heures] | min | round(2) }}
-        {% else %}
-          {{ [base_duree, duree_max_filtration_heures] | min | round(2) }}
-        {% endif %}
-        {% else %}
-          {{ [base_duree, duree_max_filtration_heures] | min | round(2) }}
-        {% endif %}
+        {% set duree = [duree_temp, duree_volume] | max | round(1) %}
+        {{ (duree * coefficient_saison) | round(1) }}
       {% else %}
         {% set duree_temp = (
           (temp_piscine / 2) if m == 'Chlore lent' else
@@ -488,7 +467,6 @@ trigger:
       - neige fondue
       - grêle
     id: mauvais_temps
-
   - platform: time
     at: !input input_heure_cycle_apresmidi
     id: "cycle_apresmidi"
@@ -531,13 +509,13 @@ action:
             data:
               target: "{{ telegram_user }}"
               message: |
-                🚨 Filtration arrêter a cause de la meteo défavorable {{ weather_label_fr}} {{ weather_emoji }} ! En attente pour une durée de 3h d'une meteo plus favorable pour relancé la pompe.
+                🚨 Filtration arrêter a cause de la meteo défavorable {{ weather_label_fr}} {{ weather_emoji }} ! En attente pour une durée de {{ r_timeout }} d'une meteo plus favorable pour relancé la pompe.
           - wait_template: >
               {{ states(weather_entity) not in [
                 'rainy', 'pouring', 'snowy-rainy', 'hail', 'lightning-rainy', 
                 'pluie', 'forte pluie', 'orage avec pluie', 'neige', 'neige fondue', 'grêle'
               ] }}
-            timeout: "03:00:00"
+            timeout: "{{ r_timeout }}"
           - choose:
               - conditions:
                   - condition: template
@@ -614,12 +592,17 @@ action:
                 {% endif %}
   - condition: template
     value_template: "{{ pompe_activee }}"
-  - delay:
-      seconds: "{{ duree_secondes | int }}"
+  - wait_for_trigger:
+      - platform: template
+        value_template: >
+          {{ (as_timestamp(now()) - as_timestamp(states[input_cycle_start].state)) >= duree_secondes | float(0) }}
+    timeout: "{{ duree_secondes | int }}"
+    continue_on_timeout: true
 
   - service: switch.turn_off
     target:
       entity_id: "{{ pompe_switch }}"
+
   - service: telegram_bot.send_message
     data:
       target: "{{ telegram_user }}"

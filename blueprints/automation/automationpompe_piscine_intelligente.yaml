@@ -1,18 +1,55 @@
 blueprint:
   name: Pompe piscine intelligente - tous modes (avec Telegram)
   description: >
-    Gère automatiquement la pompe de piscine selon plusieurs critères :
-    - Heures fixes configurables (2 cycles par jour + 2 intermédiaires)
-    - Température de l’eau (durée calculée : température divisée par 2)
-    - Mode hiver avec filtration minimale (détecté par un capteur ou boolean)
-    - Conditions météo : désactive la filtration en cas de pluie, réactive si la pluie cesse
-    - Saison : adaptation dynamique de la durée de filtration
-    - Modes de traitement spécifiques avec durées prédéfinies (ex : brome, sel, floculant)
-    Notifications Telegram envoyées à chaque démarrage/arrêt de la pompe ou en cas de suspension météo.
-    Entièrement personnalisable : capteurs, entités météo, planning, modes, volumes et débits.
-    Recommandations incluses pour optimiser l’efficacité énergétique et la qualité de l’eau.
+    💧 Gère automatiquement la pompe de piscine selon :<br>
+    - 🕑 Heures fixes configurables (2 cycles/jour + 2 intermédiaire)<br>
+    - 🌡️ Température de l’eau (durée = température ÷ 2)<br>
+    - ❄️ Mode hiver avec filtration minimale (mode hiver indiqué par le sensor saison)<br>
+    - ☁️ Conditions météo (désactive en cas de pluie et réactive si pas de pluie dans les 3h)<br>
+    - 🌱 Saison (adaptation dynamique de la durée)<br>
+    - 🧪 Mode traitement spécifique (brome, sel, algicide, floculant, etc.) avec durée prédéfinie et réglable<br>
+    📌 **Recommandations générales pour la filtration :**<br>
+    - 💧 **Durée quotidienne recommandée** = Température de l’eau ÷ 2<br>
+    - 🕗 **2 cycles recommandés** <br>
+    - Matin : entre 6h00 et 9h00<br>
+    - Après-midi : entre 14h00 et 18h00<br>
+    - Possibilité de mettre 2 cycles intermédiaire en plus<br>
+    - ❄️ En hiver : 30–60 min pendant les heures les plus froides (ex. 6h–8h)<br>
+    - ⚠️ Éviter les heures chaudes si électrolyse ou UV non stabilisé<br>
+    - 💡 Optimisation énergétique possible avec heures creuses<br>
+    🧪 **Modes de traitement disponibles** (via input_select) :<br>
+    - Filtration normale - T°/2 heures<br>
+    - Anti-algues préventif - 4 à 6h<br>
+    - Anti-algues curatif - 8 à 12h<br>
+    - Chlore lent - T°/2 heures<br>
+    - Chlore choc - 8 à 12h<br>
+    - Oxygène actif - 6 à 12h<br>
+    - Floculant - 2 à 4h + arrêt<br>
+    - pH+ ou pH- - 2 à 4h<br>
+    - Algicide longue durée - 6 à 8h<br>
+    - Traitement multi-actions - 6 à 10h<br>
+    - Brome - 12 à 24h<br>
+    - Électrolyse au sel - 12 à 24h<br>
+    - Anti-calcaire préventif - 8 à 14h<br>
+    - Anti-calcaire curatif - 12 à 24h<br>
+    📲 **Notifications Telegram** <br>
+    - Envoi de messages lors du démarrage ou de l'arrêt de la pompe<br>
+    - Avertissement si la filtration est annulée et suspendu pour cause de mauvais temps<br>
+    ⚙️ **Personnalisation complète via les entrées du blueprint** :<br>
+    - Capteurs de température piscine et extérieure<br>
+    - Entité météo pour désactivation pluie<br>
+    - Mode hiver (input_boolean ou binary_sensor)<br>
+    - Saison détectée automatiquement<br>
+    - Configuration du volume de la piscine et du débit de la pompe<br>
+    - Durées ajustables par type de traitement<br>
+    - Gestion des cycles matin/après-midi<br>
+    ✅ **Sécurité et efficacité** <br>
+    - Le cycle est annulé ou suspendu si du mauvais temps est détecté via le sensor météo<br>
+    - La pompe est relancé si le temps change pendant le timeout après detection du mauvais temps<br>
+    - La pompe est arrêtée automatiquement en fin de cycle<br>
+    - Le mode revient sur "Filtration normale" après traitement spécial<br>
+    🔧 *Personnalise chaque paramètre selon ton installation, ton traitement d’eau et ta stratégie énergétique.*
   domain: automation
-
   input:
     pompe_switch:
       name: Pompe piscine

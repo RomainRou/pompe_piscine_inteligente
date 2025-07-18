@@ -27,7 +27,7 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 
 ## 📁 Fichier blueprint
 
-📄 [`pompe_piscine_intelligente.yaml`](blueprints/automation/ton_nom_utilisateur/pompe_piscine_intelligente.yaml)
+📄 [`pompe_piscine_intelligente.yaml`](blueprints/automation/pompe_piscine_intelligente.yaml)
 
 ## 🧪 Exemple de modes personnalisés
 

@@ -5,7 +5,7 @@ blueprint:
     - 🕑 Heures fixes configurables (2 cycles/jour + 2 intermédiaire)<br>
     - 🌡️ Température de l’eau (durée = température ÷ 2)<br>
     - ❄️ Mode hiver avec filtration minimale (mode hiver indiqué par le sensor saison)<br>
-    - ☁️ Conditions météo (désactive en cas de pluie et réactive si pas de pluie dans les 3h)<br>
+    - ☁️ Conditions météo (désactive en cas de mauvaise conditions et réactive si amélioration des conditions dans les 3h)<br>
     - 🌱 Saison (adaptation dynamique de la durée)<br>
     - 🧪 Mode traitement spécifique (brome, sel, algicide, floculant, etc.) avec durée prédéfinie et réglable<br>
     📌 **Recommandations générales pour la filtration :**<br>
@@ -38,13 +38,13 @@ blueprint:
     ⚙️ **Personnalisation complète via les entrées du blueprint** :<br>
     - Capteurs de température piscine et extérieure<br>
     - Entité météo pour désactivation pluie<br>
-    - Mode hiver (input_boolean ou binary_sensor)<br>
     - Saison détectée automatiquement<br>
     - Configuration du volume de la piscine et du débit de la pompe<br>
     - Durées ajustables par type de traitement<br>
     - Gestion des cycles matin/après-midi<br>
     ✅ **Sécurité et efficacité** <br>
     - Le cycle est annulé ou suspendu si du mauvais temps est détecté via le sensor météo<br>
+    - La durée du cycle n'est réinitialiser a un redémarrage de home assistant<br>
     - La pompe est relancé si le temps change pendant le timeout après detection du mauvais temps<br>
     - La pompe est arrêtée automatiquement en fin de cycle<br>
     - Le mode revient sur "Filtration normale" après traitement spécial<br>
@@ -191,31 +191,35 @@ blueprint:
 
     input_duree_cycle:
       name: Entité input_number stockage durée cycle (sec)
-      default: input_number.pompe_piscine_duree_cycle
+      default: ""
       selector:
         entity:
           domain: input_number
+      description: >
+        Selection de l'input_number pour le stockage de la durée de filtration. 
+        Il faut le créer avec cette configuration: max: 86400, min: 0 ,step: 1
 
     input_cycle_start:
       name: Input_datetime début cycle
-      default: input_datetime.piscine_cycle_debut
+      default: ""
       selector:
         entity:
           domain: input_datetime
 
     input_cycle_en_cours:
       name: Input_boolean cycle en cours
-      default: input_boolean.piscine_cycle_en_cours
+      default: ""
       selector:
         entity:
           domain: input_boolean
-
-    telegram_user:
+    notification:
       name: Utilisateur Telegram
-      default: ""
       selector:
-        text: {}
-      description: ID utilisateur Telegram pour les notifications
+        select:
+          options:
+            - 'oui'
+            - 'non'
+      description: Activation de Telegram pour les notifications
 
     reglage_anti_calcaire_preventif:
       name: Anti-calcaire préventif
@@ -320,12 +324,15 @@ variables:
   temp_exterieure_entity: !input input_temperature_exterieure
   debit_pompe: !input input_debit_pompe_piscine
   volume_piscine: !input input_contenance_piscine
-  duree_filtration_minimale_hiver: !input input_filtration_minimale_hiver
+  input_filtration_minimale_hiver: !input input_filtration_minimale_hiver
   seuil_temp: !input input_seuil_temperature
   saison_entity: !input input_saison_sensor
   weather_entity: !input input_weather_entity
-  telegram_user: !input telegram_user
+  notification: !input notification
   r_timeout: !input input_reglage_timeout_mauvais_temps
+  timeout_meteo_defavorable: "{{ (r_timeout | int * 3600) ~ 's' }}"
+  cycle_start_entity: !input input_cycle_start
+  duree_cycle_entity: !input input_duree_cycle
   r_acp: !input reglage_anti_calcaire_preventif
   r_acc: !input reglage_anti_calcaire_curatif
   r_aap: !input reglage_anti_algues_preventif
@@ -344,7 +351,8 @@ variables:
   saison: "{{ states[saison_entity].state | lower }}"
   weather_state: "{{ states[weather_entity].state }}"
   mode_hiver: >
-    {{ states('input_saison_sensor') | lower | trim in ['hiver', 'winter'] }}
+    {% set s = states(saison_entity) | lower | trim %}
+    {{ s in ['winter', 'hiver'] }}
   coefficient_saison: >
     {% set s = saison %}
     {% if s == 'winter' %} 0.5
@@ -355,18 +363,18 @@ variables:
     {% endif %}
   is_rainy: >
     {% set weather = states(weather_entity).state %}
-    {{ weather in ['rainy', 'pouring', 'snowy-rainy', 'hail', 'lightning-rainy', 'pluie', 'forte pluie', 'orage avec pluie', 'neige', 'neige fondue', 'grêle' ] }}
+    {{ weather in ['snowy-rainy', 'hail', 'lightning-rainy', 'orage avec pluie', 'neige', 'neige fondue', 'grêle' ] }}
   duree_min_volume_heures: >
     {% set debit = debit_pompe | float(1) %}
     {% set volume = volume_piscine | float(1) %}
     {{ (volume / debit) | round(1) }}
   duree_heures: >
     {% if mode_hiver %}
-      {{ (duree_filtration_minimale_hiver | float(30)) / 60 }}
+      {{ (input_filtration_minimale_hiver | float(30)) / 60 }}
     {% else %}
       {% set m = mode %}
       {% if m == 'Filtration normale' %}
-        {% set duree_temp = ((temp_piscine + (temp_exterieure * 0.3)) / 2 / 2) | float(0) %}
+        {% set duree_temp = ((temp_piscine + (temp_exterieure * 0.3)) / 4 ) | float(0) %}
         {% set duree_volume = duree_min_volume_heures | float(0) %}
         {% set duree = [duree_temp, duree_volume] | max | round(1) %}
         {{ (duree * coefficient_saison) | round(1) }}
@@ -390,10 +398,38 @@ variables:
         {{ (duree_temp * coefficient_saison) | round(1) }}
       {% endif %}
     {% endif %}
+  cycle_start_ts: "{{ as_timestamp(states(cycle_start_entity)) }}"
   duree_secondes: "{{ (duree_heures | float(0)) * 3600 }}"
   duree_finale: "{{ duree_secondes }}"
   duree_secondes_par_cycle: "{{ duree_secondes }}"
+  duree_secs: "{{ duree_secondes_par_cycle | float(0) }}"
+  temps_restant: "{{ [ (cycle_start_ts + duree_secs) - as_timestamp(now()), 0 ] | max }}"
   duree_heures_par_cycle: "{{ duree_heures }}"
+  plage_horaire_valide: >
+    {% set duree = duree_secs | float(0) %}
+    {% set maintenant = now() %}
+
+    {% set heures = [
+      states('input_heure_cycle_matin'),
+      is_state('input_activation_cycle_1', 'on') and states('input_heure_2eme_cycle_matin') or None,
+      states('input_heure_cycle_apresmidi'),
+      is_state('input_activation_cycle_2', 'on') and states('input_heure_2eme_cycle_apresmidi') or None
+    ] %}
+
+    {% for h in heures %}
+      {% if h and h != 'unknown' %}
+        {% set debut_str = now().date().isoformat() ~ 'T' ~ h %}
+        {% set debut = debut_str | as_datetime %}
+        {% if debut %}
+          {% set fin = debut + timedelta(seconds=duree) %}
+          {% if maintenant >= debut and maintenant <= fin %}
+            {{ true }}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {{ false }}
+
   season_emoji: >
     {% set s = saison %}
     {% if s == 'spring' %} 🌸
@@ -447,21 +483,29 @@ variables:
     {% else %} météo inconnue
     {% endif %}
     
+  trigger_label: >
+    {% set labels = {
+      "cycle_matin": "l’horaire du matin",
+      "cycle_apresmidi": "l’horaire de l’après-midi",
+      "startup": "le redémarrage de Home Assistant",
+      "mauvais_temps": "les conditions météo défavorables",
+      "input_select": "le changement manuel de mode"
+    } %}
+    {{ labels.get(trigger.id, "un événement inconnu") }}
+
 trigger:
   - platform: state
     entity_id: !input input_select_mode
     not_to:
       - "Filtration normale"
+    id: "input_select"
   - platform: state
     entity_id: !input input_weather_entity
     to:
-      - rainy
       - pouring
       - snowy-rainy
       - hail
       - lightning-rainy
-      - pluie
-      - forte pluie
       - orage avec pluie
       - neige
       - neige fondue
@@ -473,75 +517,34 @@ trigger:
   - platform: time
     at: !input input_heure_cycle_matin
     id: "cycle_matin" 
+  - platform: homeassistant
+    event: start
+    id: "startup"
 action:
-  - condition: template
-    value_template: >
-      {% set weather = states(weather_entity).state %}
-      {{ weather not in ['rainy', 'pouring', 'snowy-rainy', 'hail', 'lightning-rainy', 'pluie', 'forte pluie', 'orage avec pluie', 'neige', 'neige fondue', 'grêle'] }}
-
   - choose:
       - conditions:
           - condition: template
             value_template: >
-              {% set weather = states(weather_entity).state %}
-              {{ weather in ['rainy', 'pouring', 'snowy-rainy', 'hail', 'lightning-rainy', 'pluie', 'forte pluie', 'orage avec pluie', 'neige', 'neige fondue', 'grêle' ] }}
-        sequence:
-          - service: telegram_bot.send_message
-            data:
-              target: "{{ telegram_user }}"
-              message: |
-                🌧️ Pompe non démarrée — météo défavorable : {{ weather_label_fr }} {{ weather_emoji }} donc pas de filtration lancée.
-          - stop: "Météo défavorable"
-  - variables:
-      pompe_activee: false
-  - choose:
-      - conditions:
-          - condition: state
-            entity_id: !input pompe_switch
-            state: "on"
-          - condition: template
-            value_template: "{{ trigger.id == 'mauvais_temps' }}"
-        sequence:
-          - service: switch.turn_off
-            target:
-              entity_id: "{{ pompe_switch }}"
-          - service: telegram_bot.send_message
-            data:
-              target: "{{ telegram_user }}"
-              message: |
-                🚨 Filtration arrêter a cause de la meteo défavorable {{ weather_label_fr}} {{ weather_emoji }} ! En attente pour une durée de {{ r_timeout }} d'une meteo plus favorable pour relancé la pompe.
-          - wait_template: >
-              {{ states(weather_entity) not in [
-                'rainy', 'pouring', 'snowy-rainy', 'hail', 'lightning-rainy', 
-                'pluie', 'forte pluie', 'orage avec pluie', 'neige', 'neige fondue', 'grêle'
+              {% set weather = states[weather_entity].state %}
+              {{ weather in [
+                'snowy-rainy', 'hail', 'lightning-rainy',
+                'orage avec pluie', 'neige', 'neige fondue', 'grêle'
               ] }}
-            timeout: "{{ r_timeout }}"
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: "{{ wait.completed }}"
-                sequence:
-                  - service: switch.turn_on
-                    target:
-                      entity_id: "{{ pompe_switch }}"
-                  - service: telegram_bot.send_message
-                    data:
-                      target: "{{ telegram_user }}"
-                      message: "✅ Météo redevenue favorable. Pompe relancée."
-              - conditions:
-                  - condition: template
-                    value_template: "{{ not wait.completed }}"
-                sequence:
-                  - service: telegram_bot.send_message
-                    data:
-                      target: "{{ telegram_user }}"
-                      message: "❌ Météo toujours défavorable après 3h. Pompe reste OFF."
-          - stop: "fin scenario meteo"
+        sequence:
+          - service: telegram_bot.send_message
+            data:
+              parse_mode: html
+              disable_notification: "{{ notification == 'oui' }}"
+              message: >
+                🔔 Déclencheur : {{ trigger_label }}
+                🌧️ Pompe NON démarrée — météo défavorable : {{ weather_label_fr }}
+          - stop: "Météo défavorable"
+
       - conditions:
-          - condition: template
-            value_template: "{{ duree_secondes | int > 0 }}"
           - condition: template
             value_template: "{{ not is_rainy }}"
+          - condition: template
+            value_template: "{{ duree_secondes | int > 0 }}"
           - condition: template
             value_template: "{{ mode_hiver or temp_piscine >= seuil_temp }}"
         sequence:
@@ -561,15 +564,16 @@ action:
           - service: input_boolean.turn_on
             target:
               entity_id: !input input_cycle_en_cours
-          - variables:
-              pompe_activee: true
+
           - service: telegram_bot.send_message
             data:
-              target: "{{ telegram_user }}"
+              parse_mode: html
+              disable_notification: "{{ notification == 'oui' }}"          
               message: >
                 {% set h = duree_heures_par_cycle | int %}
                 {% set m = ((duree_heures_par_cycle - h) * 60) | round(0) | int %}
                 {% if mode == 'Hiver' %}
+                  🔔 Déclencheur : {{ trigger_label }}
                   ❄️ Mode Hiver activé
                   💧 Pompe lancée en mode : {{ mode }}
                   🕒 Durée minimale forcée : {{ input_filtration_minimale_hiver | int }} minutes
@@ -577,6 +581,7 @@ action:
                   {% set contenance = volume_piscine | float(0) %}
                   {% set debit = debit_pompe | float(1) %}
                   {% set duree_volume = (contenance / debit) / 2 %}
+                  🔔 Déclencheur : {{ trigger.id if trigger.id else 'inconnu' }}
                   💧 Pompe lancée en mode : {{ mode }}
                   {{ season_emoji }} Saison en cours : {{ season_label_fr }}
                   {{ weather_emoji }} Météo au moment du lancement : {{ weather_label_fr }}
@@ -587,17 +592,18 @@ action:
                   🧮 Calcul basé sur :
                   T°÷2 ou demi-volume {{ duree_min_volume_heures | round(1) }}h — valeur la plus grande retenue.
                 {% else %}
+                  🔔 Déclencheur : {{ trigger.id if trigger.id else 'inconnu' }}
                   💧 Pompe lancée en mode : {{ mode }}
                   🕒 Durée : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
                 {% endif %}
-  - condition: template
-    value_template: "{{ pompe_activee }}"
-  - wait_for_trigger:
-      - platform: template
-        value_template: >
-          {{ (as_timestamp(now()) - as_timestamp(states[input_cycle_start].state)) >= duree_secondes | float(0) }}
-    timeout: "{{ duree_secondes | int }}"
-    continue_on_timeout: true
+
+  - condition: state
+    entity_id: !input input_cycle_en_cours
+    state: "on"
+  - wait_template: >
+      {{ now().replace(tzinfo=None) >= (states(cycle_start_entity) | as_datetime + timedelta(seconds=duree_secs)) }}
+    timeout: "24:00:00"
+    continue_on_timeout: false
 
   - service: switch.turn_off
     target:
@@ -605,7 +611,8 @@ action:
 
   - service: telegram_bot.send_message
     data:
-      target: "{{ telegram_user }}"
+      parse_mode: html
+      disable_notification: "{{ notification == 'oui' }}"     
       message: >
         {% set h = duree_heures_par_cycle | int %}
         {% set m = ((duree_heures_par_cycle - h) * 60) | round(0) | int %}
@@ -629,9 +636,11 @@ action:
           💧 Mode : {{ mode }}
           🕒 Après une durée de : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
         {% endif %}
+
   - service: input_boolean.turn_off
     target:
       entity_id: !input input_cycle_en_cours
+
   - choose:
       - conditions:
           - condition: template
@@ -642,4 +651,55 @@ action:
               entity_id: !input input_select_mode
             data:
               option: "Filtration normale"
-mode: restart
+
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input pompe_switch
+            state: "on"
+          - condition: template
+            value_template: "{{ trigger.id == 'mauvais_temps' }}"
+          - condition: template
+            value_template: "{{ trigger.id == 'cycle_matin' or trigger.id == 'cycle_apresmidi' }}"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: "{{ pompe_switch }}"
+          - service: telegram_bot.send_message
+            data:
+              parse_mode: html
+              disable_notification: "{{ notification == 'oui' }}"             
+              message: >
+                🔔 Déclencheur : {{ trigger_label }}
+                🚨 Filtration arrêtée à cause de la météo défavorable {{ weather_label_fr }} {{ weather_emoji }} ! En attente pour une durée de {{ r_timeout }}h d'une météo plus favorable pour relancer la pompe.
+          - wait_template: >
+              {{ states(weather_entity) not in [
+                'snowy-rainy', 'hail', 'lightning-rainy', 
+                'orage avec pluie', 'neige', 'neige fondue', 'grêle'
+              ] }}
+            timeout: "{{ timeout_meteo_defavorable }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ wait.completed and plage_horaire_valide }}"
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      parse_mode: html
+                      disable_notification: "{{ notification == 'oui' }}"                     
+                      message: "✅ Météo redevenue favorable. Pompe relancée dans la plage horaire."
+                  - service: switch.turn_on
+                    target:
+                      entity_id: "{{ pompe_switch }}"
+              - conditions:
+                  - condition: template
+                    value_template: "{{ wait.completed and not plage_horaire_valide }}"
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      parse_mode: html
+                      disable_notification: "{{ notification == 'oui' }}"                     
+                      message: "🔕 Météo redevenue favorable, mais hors horaires définis. Pompe non relancée."
+          - stop: "fin scenario meteo"
+          
+mode: queued

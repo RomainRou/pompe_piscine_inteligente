@@ -28,8 +28,8 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 ## 📁 Fichier blueprint
 
 📄 [`pompe_piscine_intelligente.yaml`](blueprints/automation/pompe_piscine_intelligente.yaml)
-📄 [`input_select.yaml`]
-📄 [`input_number.yaml`]
+📄 [`input_select.yaml`](input_select.yaml)
+📄 [`input_number.yaml`](input_number.yaml)
 ## 🧪 Exemple de modes personnalisés
 
 - Anti-calcaire curatif : 12 à 24h

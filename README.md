@@ -8,27 +8,28 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 - 🌡️ Calcul automatique du temps de filtration en fonction de la température de l’eau
 - ❄️ Mode hiver avec filtration minimale
 - 🌦️ Intégration météo : annulation ou report de filtration en cas de mauvais temps
-- 📲 Notifications Telegram au démarrage et arrêt
+- 📲 Possibilitées de notifications Telegram au démarrage et arrêt
 - 🧪 Modes de traitement spécifiques (anti-algues, chlore choc, floculant, etc.)
 - 🔁 Retour automatique au mode normal après traitement
 
 ## 🛠️ Pré-requis
 
-- Capteurs :
+- Capteurs nécéssaire:
   - Température de la piscine
   - Température extérieure
-  - Entité météo
-  - Saison (sensor ou input_select)
-- Entités :
+  - Entité météo (integration meteo france par exemple)
+  - Saison (integration season dans home assistant)
+- Entités nécéssaire:
   - `switch` de la pompe
-  - `input_select` pour les modes de traitement
-  - `input_boolean` pour le suivi du cycle
-  - `input_number` et `input_datetime` pour la durée/début
+  - `input_select` pour les modes de traitement (a mettre dans le fichier input_select.yaml)
+  - `input_boolean` pour le suivi du cycle ( a créé dans home assistant )
+  - `input_number` et `input_datetime` pour la durée/début ( a créé dans home assistant)
 
 ## 📁 Fichier blueprint
 
 📄 [`pompe_piscine_intelligente.yaml`](blueprints/automation/pompe_piscine_intelligente.yaml)
-
+📄 [`input_select.yaml`]
+📄 [`input_number.yaml`]
 ## 🧪 Exemple de modes personnalisés
 
 - Anti-calcaire curatif : 12 à 24h

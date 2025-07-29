@@ -485,13 +485,13 @@ variables:
     
   trigger_label: >
     {% set labels = {
-      "cycle_matin": "l’horaire du matin",
-      "cycle_apresmidi": "l’horaire de l’après-midi",
-      "startup": "le redémarrage de Home Assistant",
-      "mauvais_temps": "les conditions météo défavorables",
-      "input_select": "le changement manuel de mode"
+      "cycle_matin": "horaire du matin",
+      "cycle_apresmidi": "horaire de l’après-midi",
+      "startup": "redémarrage de Home Assistant",
+      "mauvais_temps": "conditions météo défavorables",
+      "input_select": "changement manuel de mode"
     } %}
-    {{ labels.get(trigger.id, "un événement inconnu") }}
+    {{ labels.get(trigger.id, "événement inconnu") }}
 
 trigger:
   - platform: state
@@ -525,6 +525,24 @@ action:
       - conditions:
           - condition: template
             value_template: >
+              {{ trigger.id == 'startup'
+                 and is_state(input_cycle_en_cours, 'on')
+                 and (as_timestamp(now()) - as_timestamp(states(cycle_start_entity))) < (duree_secondes | float(0)) }}
+        sequence:
+          - service: telegram_bot.send_message
+            data:
+              parse_mode: html
+              disable_notification: "{{ notification == 'oui' }}"
+              message: >
+                🔁 Redémarrage de Home Assistant détecté.
+                ⏳ Un cycle de filtration était déjà en cours.
+                🕒 Temps restant : {{ ((cycle_start_ts + duree_secs) - as_timestamp(now())) | timestamp_custom('%H:%M:%S', false) }}
+                🔄 Reprise du cycle sans redémarrer la pompe ni modifier l'heure de départ.
+          - stop: "Reprise du cycle existant sans modification"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
               {% set weather = states[weather_entity].state %}
               {{ weather in [
                 'snowy-rainy', 'hail', 'lightning-rainy',
@@ -544,13 +562,8 @@ action:
           - condition: template
             value_template: "{{ not is_rainy }}"
           - condition: template
-            value_template: "{{ duree_secondes | int > 0 }}"
-          - condition: template
             value_template: "{{ mode_hiver or temp_piscine >= seuil_temp }}"
         sequence:
-          - service: switch.turn_on
-            target:
-              entity_id: "{{ pompe_switch }}"
           - service: input_datetime.set_datetime
             target:
               entity_id: !input input_cycle_start
@@ -564,7 +577,9 @@ action:
           - service: input_boolean.turn_on
             target:
               entity_id: !input input_cycle_en_cours
-
+          - service: switch.turn_on
+            target: 
+              entity_id: "{{ pompe_switch }}"
           - service: telegram_bot.send_message
             data:
               parse_mode: html
@@ -581,7 +596,7 @@ action:
                   {% set contenance = volume_piscine | float(0) %}
                   {% set debit = debit_pompe | float(1) %}
                   {% set duree_volume = (contenance / debit) / 2 %}
-                  🔔 Déclencheur : {{ trigger.id if trigger.id else 'inconnu' }}
+                  🔔 Déclencheur : {{ trigger_label }}
                   💧 Pompe lancée en mode : {{ mode }}
                   {{ season_emoji }} Saison en cours : {{ season_label_fr }}
                   {{ weather_emoji }} Météo au moment du lancement : {{ weather_label_fr }}
@@ -592,23 +607,28 @@ action:
                   🧮 Calcul basé sur :
                   T°÷2 ou demi-volume {{ duree_min_volume_heures | round(1) }}h — valeur la plus grande retenue.
                 {% else %}
-                  🔔 Déclencheur : {{ trigger.id if trigger.id else 'inconnu' }}
+                  🔔 Déclencheur : {{ trigger_label }}
                   💧 Pompe lancée en mode : {{ mode }}
                   🕒 Durée : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
                 {% endif %}
 
   - condition: state
     entity_id: !input input_cycle_en_cours
-    state: "on"
-  - wait_template: >
-      {{ now().replace(tzinfo=None) >= (states(cycle_start_entity) | as_datetime + timedelta(seconds=duree_secs)) }}
-    timeout: "24:00:00"
-    continue_on_timeout: false
+    state: "on"  
+  - wait_for_trigger:
+      - platform: template
+        value_template: >
+          {{ (as_timestamp(now()) - as_timestamp(states(cycle_start_entity))) >= duree_secondes | float(0) }}
 
+    timeout: "{{ duree_secondes | int }}"
+    continue_on_timeout: true
+
+  - service: input_boolean.turn_off
+    target:
+      entity_id: !input input_cycle_en_cours
   - service: switch.turn_off
     target:
       entity_id: "{{ pompe_switch }}"
-
   - service: telegram_bot.send_message
     data:
       parse_mode: html
@@ -636,11 +656,11 @@ action:
           💧 Mode : {{ mode }}
           🕒 Après une durée de : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
         {% endif %}
-
-  - service: input_boolean.turn_off
+  - service: input_number.set_value
     target:
       entity_id: !input input_cycle_en_cours
-
+    data:
+      value: 0
   - choose:
       - conditions:
           - condition: template

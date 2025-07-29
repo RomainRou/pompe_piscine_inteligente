@@ -1,0 +1,19 @@
+  piscine_programme_filtration:
+    name: Programme de filtration piscine
+    icon: mdi:pool
+    options:
+      - "Filtration normale"
+      - "Anti-algues préventif"
+      - "Anti-algues curatif"
+      - "Chlore lent"
+      - "Chlore choc"
+      - "Oxygène actif"
+      - "Floculant"
+      - "pH+ ou pH-"
+      - "Algicide longue durée"
+      - "Traitement multi-actions"
+      - "Brome"
+      - "Électrolyse au sel"
+      - "Anti-calcaire curatif"
+      - "Anti-calcaire préventif"
+    initial: "Filtration normale"

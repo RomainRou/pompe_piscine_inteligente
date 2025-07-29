@@ -1,0 +1,6 @@
+duree_filtration_piscine:
+  name: Durée de la filtration 
+  min: 0
+  max: 86400
+  step: 1
+  icon: mdi:timer

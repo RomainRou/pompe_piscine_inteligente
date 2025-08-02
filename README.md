@@ -21,9 +21,9 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
   - Saison (integration season dans home assistant)
 - Entités nécéssaire:
   - `switch` de la pompe
-  - `input_select` pour les modes de traitement (a mettre dans le fichier input_select.yaml)
+  - `input_select` pour les modes de traitement (a mettre dans le fichier input_select.yaml se référé au fichier fourni)
   - `input_boolean` pour le suivi du cycle ( a créé dans home assistant )
-  - `input_number` et `input_datetime` pour la durée/début ( a créé dans home assistant)
+  - `input_number` et `input_datetime` pour la durée/début ( a créé dans home assistant se référé au fichier fourni pour l'input _number)
 
 ## 📁 Fichier blueprint
 
@@ -65,4 +65,5 @@ touch README.md  # ou utilise le modèle ci-dessus
 git add .
 git commit -m "Ajout du blueprint pompe de piscine intelligente"
 git push origin main
+
 

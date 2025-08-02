@@ -6,8 +6,8 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 
 - ⏱️ 4 plages horaires configurables (matin et après-midi)
 - 🌡️ Calcul automatique du temps de filtration en fonction de la température de l’eau
-- ❄️ Mode hiver avec filtration minimale
-- 🌦️ Intégration météo : annulation ou report de filtration en cas de mauvais temps
+- ❄️ Mode hiver avec filtration minimale (en cours de test et de developpement)
+- 🌦️ Intégration météo : annulation ou report de filtration en cas de mauvais temps (en cours de developpement possibilité de rencontré quelques souci)
 - 📲 Possibilitées de notifications Telegram au démarrage et arrêt
 - 🧪 Modes de traitement spécifiques (anti-algues, chlore choc, floculant, etc.)
 - 🔁 Retour automatique au mode normal après traitement
@@ -65,5 +65,6 @@ touch README.md  # ou utilise le modèle ci-dessus
 git add .
 git commit -m "Ajout du blueprint pompe de piscine intelligente"
 git push origin main
+
 
 

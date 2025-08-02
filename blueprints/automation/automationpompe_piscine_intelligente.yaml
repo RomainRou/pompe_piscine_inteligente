@@ -212,14 +212,14 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
+          
     notification:
-      name: Utilisateur Telegram
+      name: Notifications Telegram
+      default: false
       selector:
-        select:
-          options:
-            - 'oui'
-            - 'non'
-      description: Activation de Telegram pour les notifications
+        boolean: {}
+      description: >
+        Activation de Telegram pour les notifications
 
     reglage_anti_calcaire_preventif:
       name: Anti-calcaire préventif
@@ -487,6 +487,8 @@ variables:
     {% set labels = {
       "cycle_matin": "horaire du matin",
       "cycle_apresmidi": "horaire de l’après-midi",
+      "2eme_cycle_matin": "2eme horaire du matin",
+      "2eme_cycle_apresmidi": "2eme horaire de l’après-midi",      
       "startup": "redémarrage de Home Assistant",
       "mauvais_temps": "conditions météo défavorables",
       "input_select": "changement manuel de mode"
@@ -517,10 +519,32 @@ trigger:
   - platform: time
     at: !input input_heure_cycle_matin
     id: "cycle_matin" 
+  - platform: time
+    at: !input input_heure_2eme_cycle_apresmidi
+    id: "2eme_cycle_apresmidi"
+  - platform: time
+    at: !input input_heure_2eme_cycle_matin
+    id: "2eme_cycle_matin" 
   - platform: homeassistant
     event: start
     id: "startup"
 action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: 2eme_cycle_matin
+          - condition: template
+            value_template: "{{ not input_activation_cycle_1 }}"
+        sequence:
+          - stop: "non activation pompe cycle2 matin non actif"
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: 2eme_cycle_apresmidi
+          - condition: template
+            value_template: "{{ not input_activation_cycle_2 }}"
+        sequence:
+          - stop: "non activation pompe cycle2 apresmidi non actif"
   - choose:
       - conditions:
           - condition: template
@@ -528,11 +552,12 @@ action:
               {{ trigger.id == 'startup'
                  and is_state(input_cycle_en_cours, 'on')
                  and (as_timestamp(now()) - as_timestamp(states(cycle_start_entity))) < (duree_secondes | float(0)) }}
+          - condition: template
+            value_template: "{{ notification }}"                 
         sequence:
           - service: telegram_bot.send_message
             data:
               parse_mode: html
-              disable_notification: "{{ notification == 'oui' }}"
               message: >
                 🔁 Redémarrage de Home Assistant détecté.
                 ⏳ Un cycle de filtration était déjà en cours.
@@ -548,11 +573,12 @@ action:
                 'snowy-rainy', 'hail', 'lightning-rainy',
                 'orage avec pluie', 'neige', 'neige fondue', 'grêle'
               ] }}
+          - condition: template
+            value_template: "{{ notification }}"              
         sequence:
           - service: telegram_bot.send_message
             data:
               parse_mode: html
-              disable_notification: "{{ notification == 'oui' }}"
               message: >
                 🔔 Déclencheur : {{ trigger_label }}
                 🌧️ Pompe NON démarrée — météo défavorable : {{ weather_label_fr }}
@@ -580,37 +606,41 @@ action:
           - service: switch.turn_on
             target: 
               entity_id: "{{ pompe_switch }}"
-          - service: telegram_bot.send_message
-            data:
-              parse_mode: html
-              disable_notification: "{{ notification == 'oui' }}"          
-              message: >
-                {% set h = duree_heures_par_cycle | int %}
-                {% set m = ((duree_heures_par_cycle - h) * 60) | round(0) | int %}
-                {% if mode == 'Hiver' %}
-                  🔔 Déclencheur : {{ trigger_label }}
-                  ❄️ Mode Hiver activé
-                  💧 Pompe lancée en mode : {{ mode }}
-                  🕒 Durée minimale forcée : {{ input_filtration_minimale_hiver | int }} minutes
-                {% elif mode == 'Filtration normale' %}
-                  {% set contenance = volume_piscine | float(0) %}
-                  {% set debit = debit_pompe | float(1) %}
-                  {% set duree_volume = (contenance / debit) / 2 %}
-                  🔔 Déclencheur : {{ trigger_label }}
-                  💧 Pompe lancée en mode : {{ mode }}
-                  {{ season_emoji }} Saison en cours : {{ season_label_fr }}
-                  {{ weather_emoji }} Météo au moment du lancement : {{ weather_label_fr }}
-                  🧮 Coefficient saisonnier appliqué : x{{ coefficient_saison }}
-                  🕒 Durée : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
-                  📦 Volume piscine : {{ volume_piscine }} m³
-                  🚿 Débit pompe : {{ debit_pompe }} m³/h
-                  🧮 Calcul basé sur :
-                  T°÷2 ou demi-volume {{ duree_min_volume_heures | round(1) }}h — valeur la plus grande retenue.
-                {% else %}
-                  🔔 Déclencheur : {{ trigger_label }}
-                  💧 Pompe lancée en mode : {{ mode }}
-                  🕒 Durée : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
-                {% endif %}
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ notification }}" 
+                sequence:
+                  - service: telegram_bot.send_message
+                    data:
+                      parse_mode: html          
+                      message: >
+                        {% set h = duree_heures_par_cycle | int %}
+                        {% set m = ((duree_heures_par_cycle - h) * 60) | round(0) | int %}
+                        {% if mode == 'Hiver' %}
+                          🔔 Déclencheur : {{ trigger_label }}
+                          ❄️ Mode Hiver activé
+                          💧 Pompe lancée en mode : {{ mode }}
+                          🕒 Durée minimale forcée : {{ input_filtration_minimale_hiver | int }} minutes
+                        {% elif mode == 'Filtration normale' %}
+                          {% set contenance = volume_piscine | float(0) %}
+                          {% set debit = debit_pompe | float(1) %}
+                          {% set duree_volume = (contenance / debit) / 2 %}
+                          🔔 Déclencheur : {{ trigger_label }}
+                          💧 Pompe lancée en mode : {{ mode }}
+                          {{ season_emoji }} Saison en cours : {{ season_label_fr }}
+                          {{ weather_emoji }} Météo au moment du lancement : {{ weather_label_fr }}
+                          🧮 Coefficient saisonnier appliqué : x{{ coefficient_saison }}
+                          🕒 Durée : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
+                          📦 Volume piscine : {{ volume_piscine }} m³
+                          🚿 Débit pompe : {{ debit_pompe }} m³/h
+                          🧮 Calcul basé sur :
+                          T°÷2 ou demi-volume {{ duree_min_volume_heures | round(1) }}h — valeur la plus grande retenue.
+                        {% else %}
+                          🔔 Déclencheur : {{ trigger_label }}
+                          💧 Pompe lancée en mode : {{ mode }}
+                          🕒 Durée : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
+                        {% endif %}
 
   - condition: state
     entity_id: !input input_cycle_en_cours
@@ -629,33 +659,37 @@ action:
   - service: switch.turn_off
     target:
       entity_id: "{{ pompe_switch }}"
-  - service: telegram_bot.send_message
-    data:
-      parse_mode: html
-      disable_notification: "{{ notification == 'oui' }}"     
-      message: >
-        {% set h = duree_heures_par_cycle | int %}
-        {% set m = ((duree_heures_par_cycle - h) * 60) | round(0) | int %}
-        {% if mode == 'Hiver' %}
-          ❄️ Mode Hiver activé
-          🛑 Pompe arrêtée automatiquement à la fin du cycle.
-          💧 Mode : {{ mode }}
-          🕒 Durée minimale effectuée : {{ input_filtration_minimale_hiver | int }} minutes
-        {% elif mode == 'Filtration normale' %}
-          {% set contenance = volume_piscine | float(0) %}
-          {% set debit = debit_pompe | float(1) %}
-          {% set duree_volume = (contenance / debit) / 2 %}
-          🛑 Pompe arrêtée automatiquement à la fin du cycle.
-          💧 Mode : {{ mode }}
-          🕒 Après une durée de : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
-          📦 Volume piscine : {{ contenance }} m³
-          🚿 Débit pompe : {{ debit }} m³/h
-          🔍 Calcul : T°÷2 ou demi-volume ({{ duree_volume | round(1) }}h) — valeur la plus grande retenue.
-        {% else %}
-          🛑 Pompe arrêtée automatiquement à la fin du cycle.
-          💧 Mode : {{ mode }}
-          🕒 Après une durée de : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
-        {% endif %}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ notification }}"
+        sequence:
+          - service: telegram_bot.send_message
+            data:
+              parse_mode: html    
+              message: >
+                {% set h = duree_heures_par_cycle | int %}
+                {% set m = ((duree_heures_par_cycle - h) * 60) | round(0) | int %}
+                {% if mode == 'Hiver' %}
+                  ❄️ Mode Hiver activé
+                  🛑 Pompe arrêtée automatiquement à la fin du cycle.
+                  💧 Mode : {{ mode }}
+                  🕒 Durée minimale effectuée : {{ input_filtration_minimale_hiver | int }} minutes
+                {% elif mode == 'Filtration normale' %}
+                  {% set contenance = volume_piscine | float(0) %}
+                  {% set debit = debit_pompe | float(1) %}
+                  {% set duree_volume = (contenance / debit) / 2 %}
+                  🛑 Pompe arrêtée automatiquement à la fin du cycle.
+                  💧 Mode : {{ mode }}
+                  🕒 Après une durée de : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
+                  📦 Volume piscine : {{ contenance }} m³
+                  🚿 Débit pompe : {{ debit }} m³/h
+                  🔍 Calcul : T°÷2 ou demi-volume ({{ duree_volume | round(1) }}h) — valeur la plus grande retenue.
+                {% else %}
+                  🛑 Pompe arrêtée automatiquement à la fin du cycle.
+                  💧 Mode : {{ mode }}
+                  🕒 Après une durée de : {{ h }}h{{ ' {:02d}min'.format(m) if m > 0 else '' }}
+                {% endif %}
   - service: input_number.set_value
     target:
       entity_id: !input input_cycle_en_cours
@@ -685,10 +719,11 @@ action:
           - service: switch.turn_off
             target:
               entity_id: "{{ pompe_switch }}"
+          - condition: template
+            value_template: "{{ notification }}"              
           - service: telegram_bot.send_message
             data:
-              parse_mode: html
-              disable_notification: "{{ notification == 'oui' }}"             
+              parse_mode: html            
               message: >
                 🔔 Déclencheur : {{ trigger_label }}
                 🚨 Filtration arrêtée à cause de la météo défavorable {{ weather_label_fr }} {{ weather_emoji }} ! En attente pour une durée de {{ r_timeout }}h d'une météo plus favorable pour relancer la pompe.
@@ -703,22 +738,24 @@ action:
                   - condition: template
                     value_template: "{{ wait.completed and plage_horaire_valide }}"
                 sequence:
-                  - service: telegram_bot.send_message
-                    data:
-                      parse_mode: html
-                      disable_notification: "{{ notification == 'oui' }}"                     
-                      message: "✅ Météo redevenue favorable. Pompe relancée dans la plage horaire."
                   - service: switch.turn_on
                     target:
-                      entity_id: "{{ pompe_switch }}"
+                      entity_id: "{{ pompe_switch }}"                
+                  - condition: template
+                    value_template: "{{ notification }}"                
+                  - service: telegram_bot.send_message
+                    data:
+                      parse_mode: html                    
+                      message: "✅ Météo redevenue favorable. Pompe relancée dans la plage horaire."
               - conditions:
                   - condition: template
                     value_template: "{{ wait.completed and not plage_horaire_valide }}"
                 sequence:
+                  - condition: template
+                    value_template: "{{ notification }}"                
                   - service: telegram_bot.send_message
                     data:
-                      parse_mode: html
-                      disable_notification: "{{ notification == 'oui' }}"                     
+                      parse_mode: html                    
                       message: "🔕 Météo redevenue favorable, mais hors horaires définis. Pompe non relancée."
           - stop: "fin scenario meteo"
           

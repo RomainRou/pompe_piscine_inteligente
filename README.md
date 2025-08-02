@@ -58,10 +58,11 @@ https://github.com/ton_utilisateur/home-assistant-blueprints/blob/main/blueprint
 git clone https://github.com/RomainRou/home-assistant-blueprints.git
 cd home-assistant-blueprints
 
-mkdir -p blueprints/automation/ton_nom_utilisateur
-cp /chemin/vers/ton/blueprint.yaml blueprints/automation/ton_nom_utilisateur/pompe_piscine_intelligente.yaml
+mkdir -p blueprints/automation/RomainRou
+cp /chemin/vers/ton/blueprint.yaml blueprints/automation/RomainRou/pompe_piscine_intelligente.yaml
 touch README.md  # ou utilise le modèle ci-dessus
 
 git add .
 git commit -m "Ajout du blueprint pompe de piscine intelligente"
 git push origin main
+

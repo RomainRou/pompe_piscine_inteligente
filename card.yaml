@@ -1,0 +1,75 @@
+type: vertical-stack
+cards:
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - entity: input_datetime.test_piscine
+        name: " "
+      - entity: switch.piscine
+      - entity: sensor.piscine_sondes_thermometre_piscine
+        name: Température Piscine
+      - entity: sensor.boite_piscine_temperature
+        name: Temperature boite piscine
+      - entity: sensor.boite_piscine_humidity
+        name: Humiditée boite piscine
+      - entity: sensor.boite_piscine_battery
+        name: Batterie boite piscine
+      - entity: sensor.exterieur_temperature
+        name: Température Extérieure
+      - entity: sensor.season
+        name: Saison
+      - entity: input_select.piscine_programme_filtration
+        name: Mode sélectionné
+    title: 💧 Gestion Piscine
+    state_color: true
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: switch.piscine
+        state: "on"
+    card:
+      type: markdown
+      content: >
+
+        **⚡ Puissance actuelle de la piscine** : {{
+        states('sensor.piscine_power') }} W
+         ___
+
+        **🕒 Durée prévue cycle** :   {% set duration =
+        states('input_number.duree_filtration_piscine') | int %} {{ (duration //
+        3600) }}h {{ ((duration % 3600) // 60) }}min
+
+        ___
+
+        **⌛ Temps écoulé** :   {% set elapsed = (now().timestamp() -
+        states.switch.piscine.last_changed.timestamp()) | int %} {{ (elapsed //
+        3600) }}h {{ ((elapsed % 3600) // 60) }}min
+
+        ___
+
+        **🔄 Temps restant estimé** :   {% set remaining = duration - elapsed %}
+        {% if remaining > 0 %} {{ (remaining // 3600) }}h {{ ((remaining % 3600)
+        // 60) }}min {% else %} 0h 0min {% endif %}
+
+        ___
+
+        **🕒 Heure prévue d'arrêt** :   {% set stop_time =
+        states.switch.piscine.last_changed.timestamp() + duration %} {{
+        stop_time | timestamp_custom('%Hh %M') }}
+
+        ___
+
+        {% set duration = states('input_number.duree_filtration_piscine') | int
+        %} {% set elapsed = (now().timestamp() -
+        states.switch.piscine.last_changed.timestamp()) | int %} {% set percent
+        = ((elapsed / duration) * 100) | int %} {% if percent < 0 %}{% set
+        percent = 0 %}{% endif %} {% if percent > 100 %}{% set percent = 100
+        %}{% endif %}
+
+        {% set bar_length = 16 %} {% set filled = (percent * bar_length / 100) |
+        round(0, 'floor') %} {% set empty = bar_length - filled %} {% set bar =
+        '🟩​' * filled + '〰️​​​' * empty %}
+
+        **🔋 Progression du cycle** :
+
+        {{ bar }} {{ percent }}%

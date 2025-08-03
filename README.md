@@ -41,7 +41,7 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 
 ##📱​Carte lovelace
 fourniture d'une carte lovelace avec toutes les infos necessaire
-![screenshot](https://github.com/RomainRou/pompe_piscine_inteligente/blob/main/screenshot1.png)
+![screenshot](https://github.com/RomainRou/pompe_piscine_inteligente/blob/main/screenshot1.jpg)
 
 ## Installation automatique du blueprint ##
 <a href="https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FRomainRou%2Fpompe_piscine_inteligente%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fautomationpompe_piscine_intelligente.yaml" target="_blank" rel="noreferrer noopener"><img src="https://my.home-assistant.io/badges/blueprint_import.svg" alt="Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled." /></a>
@@ -71,6 +71,7 @@ touch README.md  # ou utilise le modèle ci-dessus
 git add .
 git commit -m "Ajout du blueprint pompe de piscine intelligente"
 git push origin main
+
 
 
 

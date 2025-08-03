@@ -22,7 +22,7 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 - Entités nécéssaire:
   - `switch` de la pompe
   - `input_select` pour les modes de traitement (a mettre dans le fichier input_select.yaml se référé au fichier fourni)
-  - `input_boolean` pour le suivi du cycle ( a créé dans home assistant )
+  - `input_boolean` pour le suivi du cycle ( a créé dans home assistant se référer au fichier fourni input_boolean.yaml)
   - `input_number` et `input_datetime` pour la durée/début ( a créé dans home assistant se référé au fichier fourni pour l'input _number)
 
 ## 📁 Fichier blueprint
@@ -30,6 +30,7 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 📄 [`pompe_piscine_intelligente.yaml`](blueprints/automation/pompe_piscine_intelligente.yaml)
 📄 [`input_select.yaml`](input_select.yaml)
 📄 [`input_number.yaml`](input_number.yaml)
+📄 [`input_boolean.yaml`](input_boolean.yaml)
 ## 🧪 Exemple de modes personnalisés
 
 - Anti-calcaire curatif : 12 à 24h

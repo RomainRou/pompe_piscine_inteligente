@@ -1,0 +1,4 @@
+  piscine_cycle_en_cours:
+    name: Piscine - Cycle en cours
+    icon: mdi:pool
+    initial: off

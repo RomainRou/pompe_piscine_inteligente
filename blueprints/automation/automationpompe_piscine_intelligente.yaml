@@ -57,7 +57,8 @@ blueprint:
       selector:
         entity:
           domain: switch
-      description: Interrupteur de la pompe de la piscine
+      description: >
+        Interrupteur de la pompe de la piscine
 
     input_temperature_piscine:
       name: Capteur température piscine
@@ -65,7 +66,8 @@ blueprint:
         entity:
           domain: sensor
           device_class: temperature
-      description: Sonde de température de la piscine
+      description: >
+        Sonde de température de la piscine
 
     input_temperature_exterieure:
       name: Sonde température extérieure
@@ -73,7 +75,8 @@ blueprint:
         entity:
           domain: sensor
           device_class: temperature
-      description: Sonde température extérieure
+      description: >
+        Sonde température extérieure
 
     input_weather_entity:
       name: Entité météo
@@ -98,7 +101,8 @@ blueprint:
       selector:
         entity:
           domain: sensor
-      description: Capteur saison actuel (printemps, été, automne, hiver)
+      description: >
+        Capteur saison actuel (printemps, été, automne, hiver)
 
     input_select_mode:
       name: Input Select mode
@@ -113,42 +117,48 @@ blueprint:
       default: "06:00:00"
       selector:
         time: {}
-      description: Heure de démarrage du cycle du matin
+      description: >
+        Heure de démarrage du cycle du matin
 
     input_activation_cycle_1:
       name: Activation 2ème cycle matin
       default: false
       selector:
         boolean: {}
-      description: Active le deuxième cycle du matin
+      description: >
+        Active le deuxième cycle du matin
 
     input_heure_2eme_cycle_matin:
       name: Heure 2ème cycle matin
-      default: "12:00:00"
+      default: "00:00:00"
       selector:
         time: {}
-      description: Heure de démarrage du deuxième cycle du matin
+      description: >
+        Heure de démarrage du deuxième cycle du matin
 
     input_heure_cycle_apresmidi:
       name: Heure démarrage cycle après-midi
-      default: "18:00:00"
+      default: "14:00:00"
       selector:
         time: {}
-      description: Heure de démarrage du cycle après-midi
+      description: >
+        Heure de démarrage du cycle après-midi
 
     input_activation_cycle_2:
       name: Activation 2ème cycle après-midi
       default: false
       selector:
         boolean: {}
-      description: Active le deuxième cycle après-midi
+      description: >
+        Active le deuxième cycle après-midi
 
     input_heure_2eme_cycle_apresmidi:
       name: Heure 2ème cycle après-midi
       default: "00:00:00"
       selector:
         time: {}
-      description: Heure du deuxième cycle après-midi
+      description: >
+        Heure du deuxième cycle après-midi
 
     input_seuil_temperature:
       name: Température minimale pour filtration (°C)
@@ -158,7 +168,8 @@ blueprint:
           min: 0
           max: 40
           unit_of_measurement: "°C"
-      description: Température minimale pour activer la filtration
+      description: >
+        Température minimale pour activer la filtration
 
     input_filtration_minimale_hiver:
       name: Durée filtration minimale hiver (minutes)
@@ -168,7 +179,8 @@ blueprint:
           min: 0
           max: 60
           unit_of_measurement: "minutes"
-      description: Durée minimale de filtration en hiver
+      description: >
+        Durée minimale de filtration en hiver
 
     input_contenance_piscine:
       name: Contenance piscine (m³)
@@ -178,7 +190,8 @@ blueprint:
           min: 1
           max: 100
           unit_of_measurement: "m³"
-      description: Volume total de la piscine
+      description: >
+        Volume total de la piscine
 
     input_debit_pompe_piscine:
       name: Débit pompe piscine (m³/h)
@@ -188,7 +201,8 @@ blueprint:
           min: 1
           max: 20
           unit_of_measurement: "m³/h"
-      description: Débit nominal de la pompe
+      description: >
+        Débit nominal de la pompe
 
     input_duree_cycle:
       name: Entité input_number stockage durée cycle (sec)

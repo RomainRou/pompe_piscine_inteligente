@@ -528,6 +528,11 @@ trigger:
   - platform: homeassistant
     event: start
     id: "startup"
+  - platform: state
+    entity_id: !input pompe_switch
+    from: 'on'
+    to: 'off'
+    id: "arret_manuel"
 action:
   - choose:
       - conditions:
@@ -564,6 +569,25 @@ action:
                 🕒 Temps restant : {{ ((cycle_start_ts + duree_secs) - as_timestamp(now())) | timestamp_custom('%H:%M:%S', false) }}
                 🔄 Reprise du cycle sans redémarrer la pompe ni modifier l'heure de départ.
           - stop: "Reprise du cycle existant sans modification"
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "arret_manuel"
+          - condition: state
+            entity_id: !input input_cycle_en_cours
+            state: "on"
+          - condition: template
+            value_template: "{{ notification }}"
+        sequence:
+          - service: telegram_bot.send_message
+            data:
+              parse_mode: html
+              message: >
+                MODE TEST
+                 🚨 Arrêt manuel détecté de la pompe
+                 🕒 Un cycle de filtration était en cours {{ mode }}
+                 ❗ L'arrêt a été fait avant la fin prévue du cycle.        
+          - stop: "Arret manuel de la pompe"
   - choose:
       - conditions:
           - condition: template

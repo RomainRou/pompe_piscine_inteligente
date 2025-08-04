@@ -11,6 +11,7 @@ Ce blueprint Home Assistant permet une gestion intelligente de la **pompe de pis
 - 📲 Possibilitées de notifications Telegram au démarrage et arrêt
 - 🧪 Modes de traitement spécifiques (anti-algues, chlore choc, floculant, etc.)
 - 🔁 Retour automatique au mode normal après traitement
+- 🛑​ Détection d'arret manuel de la pompe avec notification
 
 ## 🛠️ Pré-requis
 
@@ -73,6 +74,7 @@ touch README.md  # ou utilise le modèle ci-dessus
 git add .
 git commit -m "Ajout du blueprint pompe de piscine intelligente"
 git push origin main
+
 
 
 

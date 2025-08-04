@@ -8,6 +8,7 @@ blueprint:
     - ☁️ Conditions météo (désactive en cas de mauvaise conditions et réactive si amélioration des conditions dans les 3h)<br>
     - 🌱 Saison (adaptation dynamique de la durée)<br>
     - 🧪 Mode traitement spécifique (brome, sel, algicide, floculant, etc.) avec durée prédéfinie et réglable<br>
+    - 🛑​ Détection d'arret manuel de la pompe avec notification<br>
     📌 **Recommandations générales pour la filtration :**<br>
     - 💧 **Durée quotidienne recommandée** = Température de l’eau ÷ 2<br>
     - 🕗 **2 cycles recommandés** <br>
